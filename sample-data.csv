@@ -1,0 +1,11 @@
+ConceptId,Term,Usage_Count,Last_Used_Date,Department,Status
+123456789,Essential hypertension,450,2025-01-15,Cardiology,Active
+987654321,Type 2 diabetes mellitus,320,2025-01-14,Endocrinology,Active
+555444333,Acute myocardial infarction,89,2025-01-13,Emergency,Active
+111222333,Chronic kidney disease,67,2025-01-12,Nephrology,Active
+777888999,Pneumonia,234,2025-01-11,Pulmonology,Active
+444555666,Fracture of femur,45,2025-01-10,Orthopedics,Active
+222333444,Major depressive disorder,178,2025-01-09,Psychiatry,Active
+888999111,Migraine,156,2025-01-08,Neurology,Active
+666777888,Gastroenteritis,203,2025-01-07,Gastroenterology,Active
+333444555,Asthma,298,2025-01-06,Pulmonology,Active
