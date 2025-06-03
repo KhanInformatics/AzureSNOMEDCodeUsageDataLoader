@@ -4,6 +4,7 @@ using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 namespace AzureSNOMEDCodeUsageDataLoader
 {
@@ -12,6 +13,7 @@ namespace AzureSNOMEDCodeUsageDataLoader
         private static string? _connectionString;
         private static string? _csvFilePath;
         private static string? _tableName;
+        private static IConfiguration? _configuration;
 
         static async Task Main(string[] args)
         {
@@ -20,6 +22,9 @@ namespace AzureSNOMEDCodeUsageDataLoader
 
             try
             {
+                // Load configuration
+                LoadConfiguration();
+
                 // Get configuration from user input or command line arguments
                 await GetConfiguration(args);
 
@@ -45,6 +50,15 @@ namespace AzureSNOMEDCodeUsageDataLoader
             Console.ReadKey();
         }
 
+        private static void LoadConfiguration()
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+            _configuration = builder.Build();
+        }
+
         private static async Task GetConfiguration(string[] args)
         {
             if (args.Length >= 3)
@@ -56,17 +70,45 @@ namespace AzureSNOMEDCodeUsageDataLoader
             }
             else
             {
-                // Get from user input
-                Console.WriteLine("Please provide the following information:");
-                
-                Console.Write("Azure SQL Database Connection String: ");
-                _connectionString = Console.ReadLine();
-                
-                Console.Write("CSV File Path: ");
-                _csvFilePath = Console.ReadLine();
-                
-                Console.Write("Target Table Name: ");
-                _tableName = Console.ReadLine();
+                // Use defaults from configuration file
+                _connectionString = _configuration?.GetConnectionString("AzureDatabase");
+                _csvFilePath = _configuration?["Settings:DefaultCsvPath"];
+                _tableName = _configuration?["Settings:DefaultTableName"];
+
+                // If any configuration is missing, prompt user
+                if (string.IsNullOrWhiteSpace(_connectionString) || 
+                    _connectionString.Contains("your-database") || 
+                    _connectionString.Contains("your-username") || 
+                    _connectionString.Contains("your-password"))
+                {
+                    Console.WriteLine("Please provide the following information:");
+                    Console.Write("Azure SQL Database Connection String: ");
+                    _connectionString = Console.ReadLine();
+                }
+                else
+                {
+                    Console.WriteLine($"Using connection string from configuration file.");
+                }
+
+                if (string.IsNullOrWhiteSpace(_csvFilePath))
+                {
+                    Console.Write("CSV File Path: ");
+                    _csvFilePath = Console.ReadLine();
+                }
+                else
+                {
+                    Console.WriteLine($"Using CSV file: {_csvFilePath}");
+                }
+
+                if (string.IsNullOrWhiteSpace(_tableName))
+                {
+                    Console.Write("Target Table Name: ");
+                    _tableName = Console.ReadLine();
+                }
+                else
+                {
+                    Console.WriteLine($"Using table name: {_tableName}");
+                }
             }
         }
 
@@ -114,6 +156,9 @@ namespace AzureSNOMEDCodeUsageDataLoader
 
             Console.WriteLine($"Found {columns.Count} columns: {string.Join(", ", columns)}");
 
+            // Check if table exists, and if so, clear it first
+            await ClearTableIfExists(connection, _tableName!);
+
             // Create table if it doesn't exist
             await CreateTableIfNotExists(connection, _tableName!, columns);
 
@@ -126,11 +171,21 @@ namespace AzureSNOMEDCodeUsageDataLoader
             var records = new List<Dictionary<string, object>>();
 
             using var reader = new StreamReader(filePath);
+            
+            // Detect delimiter by reading the first line
+            var firstLine = reader.ReadLine();
+            reader.BaseStream.Position = 0;
+            reader.DiscardBufferedData();
+            
+            var delimiter = firstLine?.Contains('\t') == true ? "\t" : ",";
+            Console.WriteLine($"Detected delimiter: {(delimiter == "\t" ? "Tab" : "Comma")}");
+
             using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,
                 MissingFieldFound = null,
-                BadDataFound = null
+                BadDataFound = null,
+                Delimiter = delimiter
             });
 
             csv.Read();
@@ -195,6 +250,38 @@ namespace AzureSNOMEDCodeUsageDataLoader
             }
         }
 
+        private static async Task ClearTableIfExists(SqlConnection connection, string tableName)
+        {
+            Console.WriteLine($"Checking if table '{tableName}' exists for clearing...");
+
+            // Check if table exists
+            var checkTableQuery = @"
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = @TableName";
+
+            using var checkCommand = new SqlCommand(checkTableQuery, connection);
+            checkCommand.Parameters.AddWithValue("@TableName", tableName);
+
+            var tableExists = (int)await checkCommand.ExecuteScalarAsync() > 0;
+
+            if (tableExists)
+            {
+                Console.WriteLine($"Table '{tableName}' exists. Clearing data...");
+
+                var truncateTableQuery = $@"TRUNCATE TABLE [{tableName}]";
+
+                using var truncateCommand = new SqlCommand(truncateTableQuery, connection);
+                await truncateCommand.ExecuteNonQueryAsync();
+
+                Console.WriteLine($"Table '{tableName}' cleared successfully.");
+            }
+            else
+            {
+                Console.WriteLine($"Table '{tableName}' does not exist, no need to clear.");
+            }
+        }
+
         private static async Task InsertData(SqlConnection connection, string tableName, List<Dictionary<string, object>> data)
         {
             if (data.Count == 0)
@@ -229,7 +316,49 @@ namespace AzureSNOMEDCodeUsageDataLoader
                         
                         foreach (var column in columns)
                         {
-                            command.Parameters.AddWithValue($"@{column}", record[column]);
+                            var value = record[column];
+                            
+                            // Handle data type conversions based on column names
+                            if (column == "Usage" && value != DBNull.Value)
+                            {
+                                // Convert Usage to BIGINT, default to 0 if invalid
+                                if (long.TryParse(value.ToString(), out long usageValue))
+                                {
+                                    command.Parameters.AddWithValue($"@{column}", usageValue);
+                                }
+                                else
+                                {
+                                    // Use 0 instead of NULL for invalid/empty Usage values
+                                    command.Parameters.AddWithValue($"@{column}", 0L);
+                                }
+                            }
+                            else if (column == "Usage" && value == DBNull.Value)
+                            {
+                                // Use 0 instead of NULL for empty Usage values
+                                command.Parameters.AddWithValue($"@{column}", 0L);
+                            }
+                            else if ((column == "Active_at_Start" || column == "Active_at_End") && value != DBNull.Value)
+                            {
+                                // Convert Active flags to BIT (0/1)
+                                var stringValue = value.ToString()?.ToLower();
+                                if (stringValue == "true" || stringValue == "1" || stringValue == "yes")
+                                {
+                                    command.Parameters.AddWithValue($"@{column}", true);
+                                }
+                                else if (stringValue == "false" || stringValue == "0" || stringValue == "no")
+                                {
+                                    command.Parameters.AddWithValue($"@{column}", false);
+                                }
+                                else
+                                {
+                                    command.Parameters.AddWithValue($"@{column}", DBNull.Value);
+                                }
+                            }
+                            else
+                            {
+                                // Keep as string for SNOMED_Concept_ID and Description
+                                command.Parameters.AddWithValue($"@{column}", value);
+                            }
                         }
 
                         await command.ExecuteNonQueryAsync();
@@ -239,9 +368,10 @@ namespace AzureSNOMEDCodeUsageDataLoader
                     await transaction.CommitAsync();
                     Console.WriteLine($"Inserted {insertedCount} of {data.Count} records...");
                 }
-                catch
+                catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
+                    Console.WriteLine($"Error in batch starting at record {i + 1}: {ex.Message}");
                     throw;
                 }
             }

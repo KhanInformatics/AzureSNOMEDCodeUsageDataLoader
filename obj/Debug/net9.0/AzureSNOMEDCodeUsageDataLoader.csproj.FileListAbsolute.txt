@@ -63,3 +63,11 @@ O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\obj\Debug\net9.0\refint\Azu
 O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\obj\Debug\net9.0\AzureSNOMEDCodeUsageDataLoader.pdb
 O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\obj\Debug\net9.0\AzureSNOMEDCodeUsageDataLoader.genruntimeconfig.cache
 O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\obj\Debug\net9.0\ref\AzureSNOMEDCodeUsageDataLoader.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\obj\Debug\net9.0\AzureSNOMEDCodeUsageDataLoader.sourcelink.json
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.Configuration.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Abstractions.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.Configuration.FileExtensions.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Json.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.FileProviders.Abstractions.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.FileProviders.Physical.dll
+O:\GitHub\AzureLoader\AzureSNOMEDCodeUsageDataLoader\bin\Debug\net9.0\Microsoft.Extensions.FileSystemGlobbing.dll

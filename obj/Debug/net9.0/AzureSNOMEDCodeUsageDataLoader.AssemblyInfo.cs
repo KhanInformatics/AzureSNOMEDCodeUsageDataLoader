@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AzureSNOMEDCodeUsageDataLoader")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5ff8e87f610eb4132567faa7baa2d5c641ef4f6f")]
 [assembly: System.Reflection.AssemblyProductAttribute("AzureSNOMEDCodeUsageDataLoader")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AzureSNOMEDCodeUsageDataLoader")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
